@@ -282,11 +282,17 @@ Lock::~Lock() {
 //----------------------------------------------------------------------
 
 void Lock::Acquire() {
-
-   printf("**** Warning: method Lock::Acquire is not implemented yet\n");
-
-    exit(-1);
-
+  g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
+  if (free == true) {
+    free = false;
+    owner = g_current_thread;
+  }
+  else {
+    sleepqueue->Append((void*) g_current_thread);
+    g_current_thread->Sleep();
+    printf("Thread blocked on lock.\n");
+  }
+  g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_ON);
 }
 
 
@@ -310,11 +316,21 @@ void Lock::Acquire() {
 //----------------------------------------------------------------------
 
 void Lock::Release() {
-
-    printf("**** Warning: method Lock::Release is not implemented yet\n");
-
-    exit(-1);
-
+  g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
+  if (isHeldByCurrentThread()) {
+    if (sleepqueue->IsEmpty()) {
+      free = true;
+      owner = NULL;
+    }
+    else {
+      Thread* nextThread = (Thread*) sleepqueue->Remove();
+      g_scheduler->ReadyToRun(nextThread);
+    }
+  }
+  else {
+    printf("g_current_thread is not the owner of this lock.");
+  }
+  g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_ON);
 }
 
 
