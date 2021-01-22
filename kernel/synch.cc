@@ -54,6 +54,7 @@
 
 
 
+
 //----------------------------------------------------------------------
 
 // Semaphore::Semaphore
@@ -153,11 +154,16 @@ Semaphore::~Semaphore()
 void
 
 Semaphore::P() {
+  g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
+  value--;
+  
+  if (value < 0) {
+    queue->Append((void*) g_current_thread);
+    g_current_thread->Sleep();
+    printf("Thread blocked on semaphore.\n");
+  }
 
-  printf("**** Warning: method Semaphore::P is not implemented yet\n");
-
-  exit(-1);
-
+  g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_ON);
 }
 
 
@@ -181,11 +187,14 @@ Semaphore::P() {
 void
 
 Semaphore::V() {
+  g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
+  value++;
+  if (value >= 0) {
+    Thread* nextThread = (Thread*) queue->Remove();
+    g_scheduler->ReadyToRun(nextThread);
+  }
 
-   printf("**** Warning: method Semaphore::V is not implemented yet\n");
-
-    exit(-1);
-
+  g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_ON);
 }
 
 
