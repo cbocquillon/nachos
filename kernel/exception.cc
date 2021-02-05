@@ -625,18 +625,59 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
 	}
 
     case SC_P:{
+      int sem_id = g_machine->ReadIntRegister(4);
+      Semaphore* sema = (Semaphore*) g_object_ids->SearchObject(sem_id);
+      // Now we check if the object we have is actually a semaphore
+      if (sema->type == SEMAPHORE_TYPE) {
+        sema->P();
+        g_machine->WriteIntRegister(2,NO_ERROR);
+      } else {
+        g_machine->WriteIntRegister(2,ERROR);
+	g_syscall_error->SetMsg((char*)"",INVALID_SEMAPHORE_ID);
+      }
+
       break;
     }
 
     case SC_V:{
+      int sem_id = g_machine->ReadIntRegister(4);
+      Semaphore* sema = (Semaphore*) g_object_ids->SearchObject(sem_id);
+      // Now we check if the object we have is actually a semaphore
+      if (sema->type == SEMAPHORE_TYPE) {
+        sema->V();
+        g_machine->WriteIntRegister(2,NO_ERROR);
+      } else {
+        g_machine->WriteIntRegister(2,ERROR);
+	g_syscall_error->SetMsg((char*)"",INVALID_SEMAPHORE_ID);
+      }
+
       break;
     }
       
     case SC_SEM_CREATE:{
+      char* debug_name = (char*) g_machine->ReadIntRegister(4);
+      int init_count = g_machine->ReadIntRegister(5);
+      // Creating and adding the new semaphore
+      Semaphore* pt_sema = new Semaphore(debug_name, init_count);
+      int32_t sema_id = g_object_ids->AddObject(pt_sema);
+      // returning its ID. That's it, no sanity checks needed ???
+      g_machine->WriteIntRegister(2, sema_id);
       break;
     }
 
     case SC_SEM_DESTROY:{
+      int sem_id = g_machine->ReadIntRegister(4);
+      Semaphore* sema = (Semaphore*) g_object_ids->SearchObject(sem_id);
+
+      if (sema->type == SEMAPHORE_TYPE) {
+        g_object_ids->RemoveObject(sem_id);
+        g_machine->WriteIntRegister(2, NO_ERROR);
+        delete sema;
+      } else {
+        g_machine->WriteIntRegister(2,ERROR);
+	g_syscall_error->SetMsg((char*)"",INVALID_SEMAPHORE_ID);
+      }
+
       break;
     }
 
