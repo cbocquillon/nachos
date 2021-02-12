@@ -99,12 +99,27 @@ Thread::~Thread()
 // \return NO_ERROR on success, an error code on error
 */
 //----------------------------------------------------------------------
-int Thread::Start(Process *owner,
-		  int32_t func, int arg)
-{
+int Thread::Start(Process *owner, int32_t func, int arg) {
   ASSERT(process == NULL);
-  printf("**** Warning: method Thread::Start is not implemented yet\n");
-  exit(-1);
+  // deactivating interrupts so nobody else accesses the thread object
+  IntStatus prev_level = g_machine-> interrupt->SetStatus(INTERRUPTS_OFF);    
+  process = owner;
+  process->numThreads++;
+  type = THREAD_TYPE;
+
+  // allocating memory and context
+  stackPointer = process->addrspace->StackAllocate();
+  InitThreadContext(func, stackPointer, arg);
+  InitSimulatorContext(AllocBoundedArray(SIMULATORSTACKSIZE) , SIMULATORSTACKSIZE);
+  
+  // adding the Thread to the list of existing threads and marks it as ready
+  g_object_ids->AddObject(this);
+  g_alive->Append(this);
+  g_scheduler->ReadyToRun(this);
+
+  // reactivates interrupts, we're done !
+  g_machine->interrupt->SetStatus(prev_level);
+  return NO_ERROR;
 }
 
 //----------------------------------------------------------------------
