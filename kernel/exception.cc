@@ -682,38 +682,113 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
     }
 
     case SC_LOCK_CREATE:{
+      char* debug_name = (char*) g_machine->ReadIntRegister(4);
+      Lock* pt_lock = new Lock(debug_name);
+      int32_t lock_id = g_object_ids->AddObject(pt_lock);
+      g_machine->WriteIntRegister(2, lock_id);
       break;
     }
 
     case SC_LOCK_DESTROY:{
+      int lock_id = g_machine->ReadIntRegister(4);
+      Lock* pt_lock = (Lock*) g_object_ids->SearchObject(lock_id);
+
+      if (pt_lock->type == LOCK_TYPE) {
+        g_object_ids->RemoveObject(lock_id);
+        g_machine->WriteIntRegister(2, NO_ERROR);
+        delete pt_lock;
+      } else {
+        g_machine->WriteIntRegister(2,ERROR);
+	g_syscall_error->SetMsg((char*)"",INVALID_LOCK_ID);
+      }
       break;
     }
 
     case SC_LOCK_ACQUIRE:{
+      int lock_id = g_machine->ReadIntRegister(4);
+      Lock* pt_lock = (Lock*) g_object_ids->SearchObject(lock_id);
+      if (pt_lock->type == LOCK_TYPE) {
+        pt_lock->Acquire();
+        g_machine->WriteIntRegister(2,NO_ERROR);
+      } else {
+        g_machine->WriteIntRegister(2,ERROR);
+	g_syscall_error->SetMsg((char*)"",INVALID_LOCK_ID);
+      }
       break;
     }
 
     case SC_LOCK_RELEASE:{
+      int lock_id = g_machine->ReadIntRegister(4);
+      Lock* pt_lock = (Lock*) g_object_ids->SearchObject(lock_id);
+      if (pt_lock->type == LOCK_TYPE) {
+        pt_lock->Release();
+        g_machine->WriteIntRegister(2,NO_ERROR);
+      } else {
+        g_machine->WriteIntRegister(2,ERROR);
+	g_syscall_error->SetMsg((char*)"",INVALID_LOCK_ID);
+      }
       break;
     }
 
     case SC_COND_CREATE:{
+      char* debug_name = (char*) g_machine->ReadIntRegister(4);
+      Condition* pt_cond = new Condition(debug_name);
+      int32_t cond_id = g_object_ids->AddObject(pt_cond);
+      g_machine->WriteIntRegister(2, cond_id);
       break;
     }
 
     case SC_COND_DESTROY:{
+      int cond_id = g_machine->ReadIntRegister(4);
+      Condition* pt_cond = (Condition*) g_object_ids->SearchObject(cond_id);
+
+      if (pt_cond->type == CONDITION_TYPE) {
+        g_object_ids->RemoveObject(cond_id);
+        g_machine->WriteIntRegister(2, NO_ERROR);
+        delete pt_cond;
+      } else {
+        g_machine->WriteIntRegister(2,ERROR);
+	g_syscall_error->SetMsg((char*)"",INVALID_CONDITION_ID);
+      }
       break;
     }
 
     case SC_COND_WAIT:{
+      int cond_id = g_machine->ReadIntRegister(4);
+      Condition* pt_cond = (Condition*) g_object_ids->SearchObject(cond_id);
+      if (pt_cond->type == CONDITION_TYPE) {
+        pt_cond->Wait();
+        g_machine->WriteIntRegister(2,NO_ERROR);
+      } else {
+        g_machine->WriteIntRegister(2,ERROR);
+	g_syscall_error->SetMsg((char*)"",INVALID_CONDITION_ID);
+      }
       break;
     }
 
     case SC_COND_SIGNAL:{
+      int cond_id = g_machine->ReadIntRegister(4);
+      Condition* pt_cond = (Condition*) g_object_ids->SearchObject(cond_id);
+      if (pt_cond->type == CONDITION_TYPE) {
+        pt_cond->Signal();
+        g_machine->WriteIntRegister(2,NO_ERROR);
+      } else {
+        g_machine->WriteIntRegister(2,ERROR);
+	g_syscall_error->SetMsg((char*)"",INVALID_CONDITION_ID);
+      }
       break;
     }
 
     case SC_COND_BROADCAST:{
+      int cond_id = g_machine->ReadIntRegister(4);
+      Condition* pt_cond = (Condition*) g_object_ids->SearchObject(cond_id);
+      if (pt_cond->type == CONDITION_TYPE) {
+        pt_cond->Broadcast();
+        g_machine->WriteIntRegister(2,NO_ERROR);
+      } else {
+        g_machine->WriteIntRegister(2,ERROR);
+	g_syscall_error->SetMsg((char*)"",INVALID_CONDITION_ID);
+      }
       break;
     }
 
