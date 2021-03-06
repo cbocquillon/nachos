@@ -102,7 +102,7 @@ Thread::~Thread()
 int Thread::Start(Process *owner, int32_t func, int arg) {
   ASSERT(process == NULL);
   // deactivating interrupts so nobody else accesses the thread object
-  IntStatus prev_level = g_machine-> interrupt->SetStatus(INTERRUPTS_OFF);    
+  IntStatus prev_level = g_machine->interrupt->SetStatus(INTERRUPTS_OFF);    
   process = owner;
   process->numThreads++;
   type = THREAD_TYPE;
@@ -265,17 +265,10 @@ Thread::CheckOverflow()
 //	between setting g_thread_to_be_destroyed and going to sleep.
 */
 //----------------------------------------------------------------------
-void
-Thread::Finish ()
-{
-
+void Thread::Finish () {
     DEBUG('t', (char *)"Finishing thread \"%s\"\n", GetName());
- 
-    
-  printf("**** Warning: method Thread::Finish is not fully implemented yet\n");
-
-  // Go to sleep
-  Sleep();  // invokes SWITCH
+    g_thread_to_be_destroyed = this;    
+    Sleep();  // invokes SWITCH
 
  }
 
@@ -364,11 +357,16 @@ Thread::Sleep ()
 /*!	Save the CPU state of a user program on a context switch
 */
 //----------------------------------------------------------------------
-void
-Thread::SaveProcessorState()
-{
-  printf("**** Warning: method Thread::SaveProcessorState is not implemented yet\n");
-  exit(-1);
+void Thread::SaveProcessorState() {
+    // saving integer registers
+    for (int i = 0; i < NUM_INT_REGS; i++) {
+        thread_context.int_registers[i] = g_machine->ReadIntRegister(i);
+    }
+    // saving floating point registers
+    for (int i = 0; i < NUM_FP_REGS; i++) {
+        thread_context.float_registers[i] = g_machine->ReadFPRegister(i);
+    }
+    thread_context.cc = g_machine->ReadCC();
 }
 
 //----------------------------------------------------------------------
@@ -377,11 +375,14 @@ Thread::SaveProcessorState()
 */
 //----------------------------------------------------------------------
 
-void
-Thread::RestoreProcessorState()
-{
-  printf("**** Warning: method Thread::RestoreProcessorState is not implemented yet\n");
-  exit(-1);
+void Thread::RestoreProcessorState() {
+    for (int i = 0; i < NUM_INT_REGS; i++) {
+        g_machine->WriteIntRegister(i, thread_context.int_registers[i]);
+    }
+    for (int i = 0; i < NUM_FP_REGS; i++) {
+        g_machine->WriteFPRegister(i, thread_context.float_registers[i]);
+    }
+    g_machine->WriteCC(thread_context.cc);
 }
 
 //----------------------------------------------------------------------
