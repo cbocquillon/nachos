@@ -1,7 +1,7 @@
-/*! \file synch.cc 
-//  \brief Routines for synchronizing threads.  
+/*! \file synch.cc
+//  \brief Routines for synchronizing threads.
 //
-//      Three kinds of synchronization routines are defined here: 
+//      Three kinds of synchronization routines are defined here:
 //      semaphores, locks and condition variables.
 //
 // Any implementation of a synchronization routine needs some
@@ -18,7 +18,7 @@
 // that be disabled or enabled).
 */
 // Copyright (c) 1992-1993 The Regents of the University of California.
-// All rights reserved.  See copyright.h for copyright notice and limitation 
+// All rights reserved.  See copyright.h for copyright notice and limitation
 // of liability and disclaimer of warranty provisions.
 
 
@@ -76,16 +76,16 @@ Semaphore::~Semaphore()
 //----------------------------------------------------------------------
 void
 Semaphore::P() {
-  g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
+  IntStatus old_status = g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
   value--;
-  
+
   if (value < 0) {
     queue->Append((void*) g_current_thread);
     g_current_thread->Sleep();
     printf("Thread blocked on semaphore.\n");
   }
 
-  g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_ON);
+  g_machine->interrupt->SetStatus(old_status);
 }
 
 
@@ -99,14 +99,14 @@ Semaphore::P() {
 //----------------------------------------------------------------------
 void
 Semaphore::V() {
-  g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
+  IntStatus old_status = g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
   value++;
   if (value >= 0) {
     Thread* nextThread = (Thread*) queue->Remove();
     g_scheduler->ReadyToRun(nextThread);
   }
 
-  g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_ON);
+  g_machine->interrupt->SetStatus(old_status);
 }
 
 
@@ -152,7 +152,7 @@ Lock::~Lock() {
 */
 //----------------------------------------------------------------------
 void Lock::Acquire() {
-  g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
+  IntStatus old_status = g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
   if (free == true) {
     free = false;
     owner = g_current_thread;
@@ -162,7 +162,7 @@ void Lock::Acquire() {
     g_current_thread->Sleep();
     printf("Thread blocked on lock.\n");
   }
-  g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_ON);
+  g_machine->interrupt->SetStatus(old_status);
 }
 
 
@@ -177,7 +177,9 @@ void Lock::Acquire() {
 //----------------------------------------------------------------------
 
 void Lock::Release() {
-  g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
+  IntStatus old_status = g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
+
+
   if (isHeldByCurrentThread()) {
     if (sleepqueue->IsEmpty()) {
       free = true;
@@ -191,7 +193,7 @@ void Lock::Release() {
   else {
     printf("g_current_thread is not the owner of this lock.");
   }
-  g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_ON);
+  g_machine->interrupt->SetStatus(old_status);
 }
 
 
@@ -200,7 +202,7 @@ void Lock::Release() {
 /*! To check if current thread hold the lock
 */
 //----------------------------------------------------------------------
-bool Lock::isHeldByCurrentThread() {return (g_current_thread == owner);}	
+bool Lock::isHeldByCurrentThread() {return (g_current_thread == owner);}
 
 //----------------------------------------------------------------------
 // Condition::Condition
@@ -209,7 +211,7 @@ bool Lock::isHeldByCurrentThread() {return (g_current_thread == owner);}
 //    \param  "debugName" is an arbitrary name, useful for debugging.
 */
 //----------------------------------------------------------------------
-Condition::Condition(char* debugName) { 
+Condition::Condition(char* debugName) {
   name = new char[strlen(debugName)+1];
   strcpy(name,debugName);
   waitqueue = new Listint;
@@ -233,28 +235,30 @@ Condition::~Condition() {
 // Condition::Wait
 /*! Block the calling thread (put it in the wait queue).
 //  This operation must be atomic, so we need to disable interrupts.
-*/	
+*/
 //----------------------------------------------------------------------
-void Condition::Wait() { 
-  g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
+void Condition::Wait() {
+  IntStatus old_status = g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
+
   waitqueue->Append((void*) g_current_thread);
   g_current_thread->Sleep();
-  g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_ON);
+  g_machine->interrupt->SetStatus(old_status);
 }
 
 //----------------------------------------------------------------------
 // Condition::Signal
-/*! Wake up the first thread of the wait queue (if any). 
+/*! Wake up the first thread of the wait queue (if any).
 // This operation must be atomic, so we need to disable interrupts.
 */
 //----------------------------------------------------------------------
 void Condition::Signal() {
-  g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
+  IntStatus old_status = g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
+
   if (not(waitqueue->IsEmpty())) {
       Thread* nextThread = (Thread*) waitqueue->Remove();
       g_scheduler->ReadyToRun(nextThread);
     }
-  g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_ON);
+  g_machine->interrupt->SetStatus(old_status);
 }
 
 //----------------------------------------------------------------------
@@ -264,11 +268,11 @@ void Condition::Signal() {
 */
 //----------------------------------------------------------------------
 void Condition::Broadcast() {
-  g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
+  IntStatus old_status = g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
+
   while (not(waitqueue->IsEmpty())) {
       Thread* nextThread = (Thread*) waitqueue->Remove();
       g_scheduler->ReadyToRun(nextThread);
     }
-  g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_ON);
+  g_machine->interrupt->SetStatus(old_status);
 }
-
