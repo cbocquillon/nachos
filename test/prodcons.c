@@ -14,10 +14,11 @@ void producer() {
         P(mutex);
 
         buffer[prod_index] = i;
+        n_printf("Test %d\n", i);
         prod_index = (prod_index+1) % N;
 
         V(mutex);
-        P(full_slots);
+        V(full_slots);
     }
 }
 
@@ -28,7 +29,8 @@ void consumer() {
         P(mutex);
 
         char value = buffer[cons_index];
-        buffer[cons_index] = (cons_index+1) % N;
+        n_printf("Test consumer %d\n", value);
+        cons_index = (cons_index+1) % N;
 
         V(mutex);
         V(empty_slots);
@@ -39,8 +41,8 @@ int main() {
     mutex = SemCreate("mutex", 1);
     empty_slots = SemCreate("empty", N);
     full_slots = SemCreate("full", 0);
-    ThreadId prod = newThread("producer", producer, 0);
-    ThreadId cons = newThread("consumer", consumer, 0);
+    ThreadId prod = threadCreate("producer", producer);
+    ThreadId cons = threadCreate("consumer", consumer);
     Join(prod);
     Join(cons);
 

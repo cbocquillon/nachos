@@ -1,4 +1,4 @@
- /*! \file exception.cc 
+ /*! \file exception.cc
  //  \brief Entry point into the Nachos kernel .
  //
  //    There are two kinds of things that can cause control to
@@ -16,7 +16,7 @@
  // Copyright (c) 1992-1993 The Regents of the University of California.
  // All rights reserved.  See copyright.h for copyright notice and limitation
  // of liability and disclaimer of warranty provisions.
- 
+
 #include "machine/machine.h"
 #include "kernel/msgerror.h"
 #include "kernel/system.h"
@@ -38,7 +38,7 @@
 static int GetLengthParam(int addr) {
    int i=0;
    uint32_t c=-1;
-   
+
    // Scan the string until the null character is found
    while (c != 0) {
      g_machine->mmu->ReadMem(addr++,1,&c,false);
@@ -54,13 +54,13 @@ static int GetLengthParam(int addr) {
 //	\param addr is the memory address of the string
 //	\param dest is where the string is going to be copied
 //      \param maxlen maximum length of the string to copy in dest,
-//        including the trailing '\0' 
+//        including the trailing '\0'
 */
 //----------------------------------------------------------------------
 static void GetStringParam(int addr,char *dest,int maxlen) {
    int i=0;
    uint32_t c=-1;
-   
+
    while ((c != 0) && (i < maxlen)) {
      // Read a character from the machine memory
      g_machine->mmu->ReadMem(addr++,1,&c,false);
@@ -85,12 +85,12 @@ static void GetStringParam(int addr,char *dest,int maxlen) {
  //    - arg3 -- r6
  //    - arg4 -- r7
  //
- //    The result of the system call, if any, must be put back into r2. 
+ //    The result of the system call, if any, must be put back into r2.
  //
  //    \param exceptiontype is the kind of exception.
  //           The list of possible exception are defined in machine.h.
  //    \param vaddr is the address that causes the exception to occur
- //           (when used)  
+ //           (when used)
  */
  //----------------------------------------------------------------------
 void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
@@ -116,13 +116,13 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
 
 	// You will find below all Nachos system calls ...
 
-	case SC_HALT: 
+	case SC_HALT:
 	  // The halt system call. Stops Nachos.
 	  DEBUG('e', (char*)"Shutdown, initiated by user program.\n");
 	  g_machine->interrupt->Halt(0);
 	  g_syscall_error->SetMsg((char*)"",NO_ERROR);
 	  return;
-	  
+
 	case SC_SYS_TIME: {
 	  // The systime system call. Gets the system time
 	  DEBUG('e', (char*)"Systime call, initiated by user program.\n");
@@ -155,12 +155,12 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
           int size;
 	  char name[MAXSTRLEN];
 	  int error=NO_ERROR;
-	  
+
 	  // Get the process name
           addr = g_machine->ReadIntRegister(4);
           size = GetLengthParam(addr);
           char ch[size];
-	  GetStringParam(addr,ch,size);	
+	  GetStringParam(addr,ch,size);
 	  sprintf(name,"master thread of process %s",ch);
 	  Process * p = new Process(ch, &error);
 	  if (error != NO_ERROR) {
@@ -177,7 +177,7 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
 				  p->addrspace->getCodeStartAddress(),
 				  -1);
 	  if (error != NO_ERROR) {
-	    g_machine->WriteIntRegister(2,ERROR);	
+	    g_machine->WriteIntRegister(2,ERROR);
 	    if (error == OUT_OF_MEMORY)
 	      g_syscall_error->SetMsg((char*)"",error);
 	    else
@@ -185,11 +185,11 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
 	    break;
 	  }
 	  g_syscall_error->SetMsg((char*)"",NO_ERROR);
-	  g_machine->WriteIntRegister(2,tid);	
+	  g_machine->WriteIntRegister(2,tid);
 	  break;
         }
 
-	case SC_NEW_THREAD: {	  
+	case SC_NEW_THREAD: {
 	  // The newThread system call
 	  // Create a new thread in the same address space
 	  DEBUG('e', (char*)"Multithread: NewThread call.\n");
@@ -220,16 +220,16 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
 	    g_syscall_error->SetMsg((char*)"",err);
 	  }
 	  else {
-	    g_machine->WriteIntRegister(2,tid);	
+	    g_machine->WriteIntRegister(2,tid);
 	    g_syscall_error->SetMsg((char*)"",NO_ERROR);
 	  }
-	  break;	   
+	  break;
 	}
-	
+
         case SC_JOIN: {
 	  // The join system call
           // Wait for the thread idThread to finish
-          DEBUG('e', (char*)"Process or thread: Join call.\n");	  
+          DEBUG('e', (char*)"Process or thread: Join call.\n");
 	  int32_t tid;
           Thread* ptThread;
 	  tid = g_machine->ReadIntRegister(4);
@@ -239,7 +239,7 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
 	    {
 	      g_current_thread->Join(ptThread);
 	      g_syscall_error->SetMsg((char*)"",NO_ERROR);
-	      g_machine->WriteIntRegister(2,0);      
+	      g_machine->WriteIntRegister(2,0);
 	    }
 	  else
 	    // Thread already terminated (type set to INVALID_TYPE) or call on an object
@@ -247,10 +247,10 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
 	    // Exit with no error code since we cannot separate the two cases
 	    {
 	      g_syscall_error->SetMsg((char*)"",NO_ERROR);
-	      g_machine->WriteIntRegister(2,0);      
+	      g_machine->WriteIntRegister(2,0);
 	    }
 	  DEBUG('e',(char*)"Fin Join");
-	  break;	   
+	  break;
         }
 
 	case SC_YIELD: {
@@ -260,8 +260,8 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
 	  g_syscall_error->SetMsg((char*)"",NO_ERROR);
 	  break;
 	}
-	
-	case SC_PERROR: { 
+
+	case SC_PERROR: {
 	  // the PError system call
 	  // print the last error message
 	  DEBUG('e', (char*)"Debug: Perror call.\n");
@@ -274,11 +274,11 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
 	  g_syscall_error->PrintLastMsg(g_console_driver,ch);
 	  break;
 	}
-	  
+
         case SC_CREATE: {
           // The create system call
           // Create a new file in nachos file system
-          DEBUG('e', (char*)"Filesystem: Create call.\n");	 
+          DEBUG('e', (char*)"Filesystem: Create call.\n");
 	  int addr;
 	  int size;
 	  int ret;
@@ -293,17 +293,17 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
           int err = g_file_system->Create(ch,size);
           if (err == NO_ERROR) {
 	    g_syscall_error->SetMsg((char*)"",NO_ERROR);
-	    ret = 0; 
+	    ret = 0;
 	  }
-          else { 
-	      ret = ERROR; 
+          else {
+	      ret = ERROR;
 	      if (err == OUT_OF_DISK) g_syscall_error->SetMsg((char*)"",err);
 	      else g_syscall_error->SetMsg(ch,err);
 	  }
 	  g_machine->WriteIntRegister(2,ret);
           break;
         }
-         
+
         case SC_OPEN: {
           // The open system call
           // Opens a file and returns an openfile identifier
@@ -328,10 +328,10 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
 	    ret = fid;
 	    g_syscall_error->SetMsg((char*)"",NO_ERROR);
 	  }
-	  g_machine->WriteIntRegister(2,ret); 
-          break;         
+	  g_machine->WriteIntRegister(2,ret);
+          break;
         }
- 
+
 	case SC_READ: {
 	 // The read system call
 	 // Read in a file or the console
@@ -340,7 +340,7 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
          int size;
          int32_t f;
          int numread;
-	 // Get the buffer address in the machine memory 
+	 // Get the buffer address in the machine memory
          addr = g_machine->ReadIntRegister(4);
 	 // Get the requested size
          size = g_machine->ReadIntRegister(5);
@@ -369,15 +369,15 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
 	   g_console_driver->GetString(buffer,size);
 	   numread = size;
 	   g_syscall_error->SetMsg((char*)"",NO_ERROR);
-	 }         
+	 }
          for (int i=0;i<numread;i++)
            { //copy the buffer into the emulator memory
              g_machine->mmu->WriteMem(addr++,1,buffer[i]);
-           }         
+           }
          g_machine->WriteIntRegister(2,numread);
          break;
        }
- 
+
 	case SC_WRITE: {
 	  // The write system call
 	  // Write in a file or at the console
@@ -389,7 +389,7 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
          addr = g_machine->ReadIntRegister(4);
          size = g_machine->ReadIntRegister(5);
 	 //f is the openfileid or 1 (console)
-         f = g_machine->ReadIntRegister(6);        
+         f = g_machine->ReadIntRegister(6);
          char buffer [size];
          for (int i=0;i<size;i++) {
 	   g_machine->mmu->ReadMem(addr++,1,&c,false);
@@ -413,7 +413,7 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
 	       sprintf(msg,"%d",f);
 	       g_syscall_error->SetMsg(msg,INVALID_FILE_ID);
 	     }
-	 } 
+	 }
 	 // write at the console
          else {
 	   if (f==CONSOLE_OUTPUT) {
@@ -426,11 +426,11 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
 	     sprintf(msg,"%d",f);
 	     g_syscall_error->SetMsg(msg,INVALID_FILE_ID);
 	   }
-	 }         
+	 }
          g_machine->WriteIntRegister(2,numwrite);
          break;
        }
-        
+
       case SC_SEEK:{
 	// Seek to a given position in an opened file
 	 DEBUG('e', (char*)"Filesystem: Seek call.\n");
@@ -459,7 +459,7 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
 	       g_syscall_error->SetMsg(msg,INVALID_FILE_ID);
 	     }
 	   g_machine->WriteIntRegister(2,error);
-	 } 
+	 }
          else {
 	   g_machine->WriteIntRegister(2,ERROR);
 	   sprintf(msg,"%d",f);
@@ -471,7 +471,7 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
 	case SC_CLOSE: {
 	  // The close system call
 	  // Close a file
-	  DEBUG('e', (char*)"Filesystem: Close call.\n");	
+	  DEBUG('e', (char*)"Filesystem: Close call.\n");
 	  // Get the openfile number
 	  int32_t fid = g_machine->ReadIntRegister(4);
 	  OpenFile *file = (OpenFile *)g_object_ids->SearchObject(fid);
@@ -482,7 +482,7 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
 	    g_machine->WriteIntRegister(2,0);
 	    g_syscall_error->SetMsg((char*)"",NO_ERROR);
 	  }
-	  else { 
+	  else {
 	    g_machine->WriteIntRegister(2,ERROR);
 	    sprintf(msg,"%d",fid);
 	    g_syscall_error->SetMsg(msg,INVALID_FILE_ID);
@@ -505,7 +505,7 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
 	  // Actually remove it
 	  int err=g_open_file_table->Remove(ch);
 	  if (err == NO_ERROR) {
-	    ret = 0; 
+	    ret = 0;
 	    g_syscall_error->SetMsg((char*)"",NO_ERROR);
 	  }
 	  else {
@@ -518,14 +518,14 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
 
 	case SC_MKDIR:{
 	  // the Mkdir system call
-	  // make a new directory in the file system 
-	  DEBUG('e', (char*)"Filesystem: Mkdir call.\n");    
+	  // make a new directory in the file system
+	  DEBUG('e', (char*)"Filesystem: Mkdir call.\n");
 	  int addr;
-	  int sizep;	  
+	  int sizep;
 	  addr = g_machine->ReadIntRegister(4);
 	  sizep = GetLengthParam(addr);
 	  char name[sizep];
-	  GetStringParam(addr,name,sizep);         
+	  GetStringParam(addr,name,sizep);
 	  // name is the name of the new directory
 	  int good=g_file_system->Mkdir(name);
 	  if (good != NO_ERROR) {
@@ -539,13 +539,13 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
 	  }
 	  break;
 	}
-	
+
 	case SC_RMDIR:{
 	  // the Rmdir system call
 	  // remove a directory from the file system
-	  DEBUG('e', (char*)"Filesystem: Rmdir call.\n");      
+	  DEBUG('e', (char*)"Filesystem: Rmdir call.\n");
 	  int addr;
-	  int sizep; 
+	  int sizep;
 	  addr = g_machine->ReadIntRegister(4);
 	  sizep = GetLengthParam(addr);
 	  char name[sizep];
@@ -568,10 +568,10 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
 	  g_file_system->List();
 	  g_syscall_error->SetMsg((char*)"",NO_ERROR);
 	  break;
-	}      
-         
+	}
+
 	case SC_TTY_SEND:{
-	  // the TtySend system call	
+	  // the TtySend system call
 	  // Sends some char by the serial line emulated
 	  DEBUG('e', (char*)"ACIA: Send call.\n");
 	  if (g_cfg->ACIA != ACIA_NONE) {
@@ -587,23 +587,23 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
 		if (buff[i] == '\0') break;
 	      }
 	    result=g_acia_driver->TtySend(buff);
-	    g_machine->WriteIntRegister(2,result);	
+	    g_machine->WriteIntRegister(2,result);
 	    g_syscall_error->SetMsg((char*)"",NO_ERROR);
-	  }	
+	  }
 	  else {
 	    g_machine->WriteIntRegister(2,ERROR);
 	    g_syscall_error->SetMsg((char*)"",NO_ACIA);
 	  }
 	  break;
 	}
-	
+
 	case SC_TTY_RECEIVE:{
-	  // the TtyReceive system call	
+	  // the TtyReceive system call
 	  // read some char on the serial line
 	  DEBUG('e', (char*)"ACIA: Receive call.\n");
-	  if (g_cfg->ACIA != ACIA_NONE) {    
+	  if (g_cfg->ACIA != ACIA_NONE) {
 	    int result;
-	    int i=0;	 
+	    int i=0;
 	    int addr=g_machine->ReadIntRegister(4);
 	    int length=g_machine->ReadIntRegister(5);
 	    char buff[length+1];
@@ -614,9 +614,9 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
 	      i++;
 	    }
 	    g_machine->mmu->WriteMem(addr,1,0);
-	    g_machine->WriteIntRegister(2,result);	
+	    g_machine->WriteIntRegister(2,result);
 	    g_syscall_error->SetMsg((char*)"",NO_ERROR);
-	  }	
+	  }
 	  else {
 	    g_machine->WriteIntRegister(2,ERROR);
 	    g_syscall_error->SetMsg((char*)"",NO_ACIA);
@@ -653,12 +653,16 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
 
       break;
     }
-      
+
     case SC_SEM_CREATE:{
-      char* debug_name = (char*) g_machine->ReadIntRegister(4);
+  	  // Get the process name
+      int addr = g_machine->ReadIntRegister(4);
+      int size = GetLengthParam(addr);
+      char ch[size];
+  	  GetStringParam(addr, ch, size);
       int init_count = g_machine->ReadIntRegister(5);
       // Creating and adding the new semaphore
-      Semaphore* pt_sema = new Semaphore(debug_name, init_count);
+      Semaphore* pt_sema = new Semaphore(ch, init_count);
       int32_t sema_id = g_object_ids->AddObject(pt_sema);
       // returning its ID. That's it, no sanity checks needed ???
       g_machine->WriteIntRegister(2, sema_id);
@@ -682,8 +686,12 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
     }
 
     case SC_LOCK_CREATE:{
-      char* debug_name = (char*) g_machine->ReadIntRegister(4);
-      Lock* pt_lock = new Lock(debug_name);
+      // Get the process name
+      int addr = g_machine->ReadIntRegister(4);
+      int size = GetLengthParam(addr);
+      char ch[size];
+      GetStringParam(addr, ch, size);
+      Lock* pt_lock = new Lock(ch);
       int32_t lock_id = g_object_ids->AddObject(pt_lock);
       g_machine->WriteIntRegister(2, lock_id);
       break;
@@ -731,8 +739,12 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
     }
 
     case SC_COND_CREATE:{
-      char* debug_name = (char*) g_machine->ReadIntRegister(4);
-      Condition* pt_cond = new Condition(debug_name);
+      // Get the process name
+      int addr = g_machine->ReadIntRegister(4);
+      int size = GetLengthParam(addr);
+      char ch[size];
+      GetStringParam(addr, ch, size);
+      Condition* pt_cond = new Condition(ch);
       int32_t cond_id = g_object_ids->AddObject(pt_cond);
       g_machine->WriteIntRegister(2, cond_id);
       break;
@@ -802,7 +814,7 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
          break;
        }
 
-      } 
+      }
        // from now, the code is executed whatever system call is invoked
        // we increment the PC counter
        g_machine->int_registers[PREVPC_REG]=g_machine->int_registers[PC_REG];
@@ -810,7 +822,7 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
        g_machine->int_registers[NEXTPC_REG]+=4;
 
        break;
-     
+
        // Other exceptions
        // ----------------
    case READONLY_EXCEPTION:

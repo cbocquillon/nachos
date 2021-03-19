@@ -77,13 +77,13 @@ Semaphore::~Semaphore()
 void
 Semaphore::P() {
   IntStatus old_status = g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
-  value--;
-
-  if (value < 0) {
-    queue->Append((void*) g_current_thread);
+  //printf("P on semaphore : %s %d \n", this->name, this->value);
+  if (value <= 0) {
+    this->queue->Append(g_current_thread);
     g_current_thread->Sleep();
-    printf("Thread blocked on semaphore.\n");
+    //printf("Thread blocked on semaphore.\n");
   }
+  value--;
 
   g_machine->interrupt->SetStatus(old_status);
 }
@@ -100,11 +100,12 @@ Semaphore::P() {
 void
 Semaphore::V() {
   IntStatus old_status = g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
-  value++;
-  if (value >= 0) {
-    Thread* nextThread = (Thread*) queue->Remove();
-    g_scheduler->ReadyToRun(nextThread);
+  //printf("V on semaphore : %s %d \n", this->name, this->value);
+  void* nextThread = this->queue->Remove();
+  if (nextThread != nullptr) {
+    g_scheduler->ReadyToRun((Thread*) nextThread);
   }
+  value++;
 
   g_machine->interrupt->SetStatus(old_status);
 }
@@ -187,6 +188,7 @@ void Lock::Release() {
     }
     else {
       Thread* nextThread = (Thread*) sleepqueue->Remove();
+      owner = nextThread;
       g_scheduler->ReadyToRun(nextThread);
     }
   }

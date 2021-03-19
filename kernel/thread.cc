@@ -225,7 +225,10 @@ Thread::InitSimulatorContext(int8_t* base_stack_addr,
 void
 Thread::Join(Thread *Idthread)
 {
-    while (g_alive->Search(Idthread)) Yield();
+    while (g_alive->Search(Idthread)) {
+        //printf("Attente active\n");
+        Yield();
+    }
 }
 
 //----------------------------------------------------------------------
@@ -269,6 +272,7 @@ void Thread::Finish () {
     DEBUG('t', (char *)"Finishing thread \"%s\"\n", GetName());
     IntStatus oldLevel = g_machine->interrupt->SetStatus(INTERRUPTS_OFF);
     g_thread_to_be_destroyed = this;
+    g_alive->RemoveItem(this);
     Sleep();  // invokes SWITCH
  }
 
