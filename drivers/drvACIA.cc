@@ -42,7 +42,7 @@ DriverACIA::DriverACIA()
   *receive_sema = Semaphore("receive_sema", 0);
   ind_send = 1;
   ind_rec = 0;
-  g_cfg->ACIA->mode->Interrupt;
+  g_cfg->ACIA = ACIA_INTERRUPT;
 }
 
 //-------------------------------------------------------------------------
@@ -74,7 +74,7 @@ int DriverACIA::TtyReceive(char* buff,int lg)
   }
   buff[borne-1] = '\0';
   ind_rec = 0;
-  SetWorkingMode(SEND_INTERRUPT);
+  g_cfg->ACIA = ACIA_INTERRUPT;
 }
 
 //-------------------------------------------------------------------------
