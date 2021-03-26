@@ -52,10 +52,19 @@ DriverACIA::DriverACIA()
 //-------------------------------------------------------------------------
 
 int DriverACIA::TtySend(char* buff)
-{ 
-  printf("**** Warning: method Tty_Send of the ACIA driver not implemented yet\n");
-  exit(-1);
-  return 0;
+{
+  send_sema->P();
+  int i = 0;
+  do {
+    send_buffer[i] = buff[i];
+    
+    i++;
+    
+  } while (buff[i-1] != '\0');
+  
+  ind_send = 0;
+  g_cfg->ACIA = ACIA_BUSY_WAITING;
+  g_machine->acia->PutChar(send_buffer[0]);
 }
 
 //-------------------------------------------------------------------------
@@ -87,8 +96,13 @@ int DriverACIA::TtyReceive(char* buff,int lg)
 
 void DriverACIA::InterruptSend()
 {
-  printf("**** Warning: send interrupt handler not implemented yet\n");
-  exit(-1);
+  if (send_buffer[ind_send] != '\0') {
+    ind_send++;
+    g_machine->acia->PutChar(send_buffer[ind_send]);
+  } else {
+    g_cfg->ACIA = ACIA_INTERRUPT;
+    send_sema->V();
+  }
 }
 
 //-------------------------------------------------------------------------
@@ -103,6 +117,10 @@ void DriverACIA::InterruptSend()
 
 void DriverACIA::InterruptReceive()
 {
-  printf("**** Warning: receive interrupt handler not implemented yet\n");
-  exit(-1);
+  receive_buffer[ind_rec] = g_machine->acia->GetChar();
+  if (receive_buffer[ind_rec] == '\0') {
+    g_cfg->ACIA = ACIA_INTERRUPT;
+    receive_sema->V();
+  }
+  ind_rec++; 
 }
