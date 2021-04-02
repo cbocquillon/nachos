@@ -6,8 +6,8 @@ int main() {
     int i;
     char buff[LENGTH];
     for (i = 0; i < RUNTIME; i++) {
-        TtySend("pong");
         TtyReceive(buff, LENGTH);
+        TtySend("pong");
         n_printf("I received a %s !\n", buff);
     }
 

@@ -65,7 +65,8 @@ int DriverACIA::TtySend(char* buff) {
         i++;
     } while (buff[i-1] != '\0');
     // sending the first character
-    ind_send = 1;
+    ind_send = 0;
+    //printf("Sending : %c\n", send_buffer[0]);
     g_machine->acia->PutChar(send_buffer[0]);
 }
 
@@ -79,7 +80,7 @@ int DriverACIA::TtySend(char* buff) {
 int DriverACIA::TtyReceive(char* buff,int lg) {
     DEBUG('i', "Call to TtyReceive\n");
     receive_sema->P();
-    int borne = min(lg, ind_rec);
+    int borne = lg;//min(lg, ind_rec);
     for (int i=0; i<borne ; i++) {
         buff[i] = receive_buffer[i];
     }
@@ -98,6 +99,7 @@ int DriverACIA::TtyReceive(char* buff,int lg) {
 void DriverACIA::InterruptSend() {
   if (send_buffer[ind_send] != '\0') {
     ind_send++;
+    //printf("Sending : %c %d\n", send_buffer[ind_send], send_buffer[ind_send]);
     g_machine->acia->PutChar(send_buffer[ind_send]);
   } else {
     send_sema->V();
@@ -115,6 +117,7 @@ void DriverACIA::InterruptSend() {
 //-------------------------------------------------------------------------
 
 void DriverACIA::InterruptReceive() {
+    //printf("Receive : %c %d\n", receive_buffer[ind_rec], receive_buffer[ind_rec]);
     receive_buffer[ind_rec] = g_machine->acia->GetChar();
     if (receive_buffer[ind_rec] == '\0') {
         receive_sema->V();
