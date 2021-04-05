@@ -226,7 +226,7 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
 	  break;
 	}
 
-        case SC_JOIN: {
+    case SC_JOIN: {
 	  // The join system call
           // Wait for the thread idThread to finish
           DEBUG('e', (char*)"Process or thread: Join call.\n");
@@ -275,10 +275,10 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
 	  break;
 	}
 
-        case SC_CREATE: {
-          // The create system call
-          // Create a new file in nachos file system
-          DEBUG('e', (char*)"Filesystem: Create call.\n");
+    case SC_CREATE: {
+      // The create system call
+      // Create a new file in nachos file system
+      DEBUG('e', (char*)"Filesystem: Create call.\n");
 	  int addr;
 	  int size;
 	  int ret;
@@ -304,10 +304,10 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
           break;
         }
 
-        case SC_OPEN: {
-          // The open system call
-          // Opens a file and returns an openfile identifier
-          DEBUG('e', (char*)"Filesystem: Open call.\n");
+    case SC_OPEN: {
+      // The open system call
+      // Opens a file and returns an openfile identifier
+      DEBUG('e', (char*)"Filesystem: Open call.\n");
 	  int addr;
 	  int ret;
 	  int sizep;
@@ -333,50 +333,50 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
         }
 
 	case SC_READ: {
-	 // The read system call
-	 // Read in a file or the console
-	 DEBUG('e', (char*)"Filesystem: Read call.\n");
+         // The read system call
+         // Read in a file or the console
+         DEBUG('e', (char*)"Filesystem: Read call.\n");
          int addr;
          int size;
          int32_t f;
          int numread;
-	 // Get the buffer address in the machine memory
+         // Get the buffer address in the machine memory
          addr = g_machine->ReadIntRegister(4);
-	 // Get the requested size
+         // Get the requested size
          size = g_machine->ReadIntRegister(5);
-	 // Get the openfile number or 0 (console)
+         // Get the openfile number or 0 (console)
          f = g_machine->ReadIntRegister(6);
          char buffer[size];
 
-	 // Read in a file
+         // Read in a file
          if (f != CONSOLE_INPUT) {
-	   int32_t fid = f;
-	   OpenFile *file = (OpenFile *)g_object_ids->SearchObject(fid);
-	   if (file && file->type == FILE_TYPE)
-	     {
-	       numread = file->Read(buffer,size);
-	       g_syscall_error->SetMsg((char*)"",NO_ERROR);
-	     }
-	   else
-	     {
-	     numread = ERROR;
-	     sprintf(msg,"%d",f);
-	     g_syscall_error->SetMsg(msg,INVALID_FILE_ID);
-	     }
-	 }
-	 // Read on the console
+           int32_t fid = f;
+           OpenFile *file = (OpenFile *)g_object_ids->SearchObject(fid);
+           if (file && file->type == FILE_TYPE)
+             {
+               numread = file->Read(buffer,size);
+               g_syscall_error->SetMsg((char*)"",NO_ERROR);
+             }
+           else
+             {
+             numread = ERROR;
+             sprintf(msg,"%d",f);
+             g_syscall_error->SetMsg(msg,INVALID_FILE_ID);
+             }
+         }
+         // Read on the console
          else {
-	   g_console_driver->GetString(buffer,size);
-	   numread = size;
-	   g_syscall_error->SetMsg((char*)"",NO_ERROR);
-	 }
+           g_console_driver->GetString(buffer,size);
+           numread = size;
+           g_syscall_error->SetMsg((char*)"",NO_ERROR);
+         }
          for (int i=0;i<numread;i++)
            { //copy the buffer into the emulator memory
              g_machine->mmu->WriteMem(addr++,1,buffer[i]);
            }
          g_machine->WriteIntRegister(2,numread);
          break;
-       }
+     }
 
 	case SC_WRITE: {
 	  // The write system call
@@ -431,7 +431,7 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
          break;
        }
 
-      case SC_SEEK:{
+    case SC_SEEK:{
 	// Seek to a given position in an opened file
 	 DEBUG('e', (char*)"Filesystem: Seek call.\n");
          int offset;
@@ -490,7 +490,7 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
 	  break;
 	}
 
-        case SC_REMOVE: {
+    case SC_REMOVE: {
 	  // The Remove system call
 	  // Remove a file from the file system
 	  DEBUG('e', (char*)"Filesystem: Remove call.\n");
@@ -624,6 +624,7 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
 	  break;
 	}
 
+    #ifdef ETUDIANTS_TP
     case SC_P:{
       int sem_id = g_machine->ReadIntRegister(4);
       Semaphore* sema = (Semaphore*) g_object_ids->SearchObject(sem_id);
@@ -803,25 +804,26 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
       }
       break;
     }
+    #endif
 
     case SC_MMAP:{
       break;
     }
 
-       default:
-         printf("Invalid system call number : %d\n", type);
-         exit(ERROR);
-         break;
-       }
+    default:
+        printf("Invalid system call number : %d\n", type);
+        exit(ERROR);
+        break;
+    }
 
-      }
-       // from now, the code is executed whatever system call is invoked
-       // we increment the PC counter
-       g_machine->int_registers[PREVPC_REG]=g_machine->int_registers[PC_REG];
-       g_machine->int_registers[PC_REG]=g_machine->int_registers[NEXTPC_REG];
-       g_machine->int_registers[NEXTPC_REG]+=4;
+    }
+    // from now, the code is executed whatever system call is invoked
+    // we increment the PC counter
+    g_machine->int_registers[PREVPC_REG]=g_machine->int_registers[PC_REG];
+    g_machine->int_registers[PC_REG]=g_machine->int_registers[NEXTPC_REG];
+    g_machine->int_registers[NEXTPC_REG]+=4;
 
-       break;
+    break;
 
        // Other exceptions
        // ----------------

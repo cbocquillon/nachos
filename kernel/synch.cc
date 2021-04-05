@@ -34,13 +34,12 @@
 // \param initialValue is the initial value of the semaphore.
 */
 //----------------------------------------------------------------------
-Semaphore::Semaphore(char* debugName, int initialValue)
-{
-  name = new char[strlen(debugName)+1];
-  strcpy(name,debugName);
-  value = initialValue;
-  queue = new Listint;
-  type = SEMAPHORE_TYPE;
+Semaphore::Semaphore(char* debugName, int initialValue) {
+    name = new char[strlen(debugName)+1];
+    strcpy(name,debugName);
+    value = initialValue;
+    queue = new Listint;
+    type = SEMAPHORE_TYPE;
 }
 
 //----------------------------------------------------------------------
@@ -49,18 +48,17 @@ Semaphore::Semaphore(char* debugName, int initialValue)
 //	is still waiting on the semaphore!
 */
 //----------------------------------------------------------------------
-Semaphore::~Semaphore()
-{
-  type = INVALID_TYPE;
-  if (!queue->IsEmpty()) {
-    DEBUG('s', (char *)"Destructor of semaphore \"%s\", queue is not empty!!\n",name);
-    Thread *t =  (Thread *)queue->Remove();
-    DEBUG('s', (char *)"Queue contents %s\n",t->GetName());
-    queue->Append((void *)t);
-  }
-  ASSERT(queue->IsEmpty());
-  delete [] name;
-  delete queue;
+Semaphore::~Semaphore() {
+    type = INVALID_TYPE;
+    if (!queue->IsEmpty()) {
+        DEBUG('s', (char *)"Destructor of semaphore \"%s\", queue is not empty!!\n",name);
+        Thread *t =  (Thread *)queue->Remove();
+        DEBUG('s', (char *)"Queue contents %s\n",t->GetName());
+        queue->Append((void *)t);
+    }
+    ASSERT(queue->IsEmpty());
+    delete [] name;
+    delete queue;
 }
 
 //----------------------------------------------------------------------
@@ -74,18 +72,23 @@ Semaphore::~Semaphore()
 //	when it is called.
 */
 //----------------------------------------------------------------------
-void
-Semaphore::P() {
-  IntStatus old_status = g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
-  //printf("P on semaphore : %s %d \n", this->name, this->value);
-  if (value <= 0) {
-    this->queue->Append(g_current_thread);
-    g_current_thread->Sleep();
-    //printf("Thread blocked on semaphore.\n");
-  }
-  value--;
-
-  g_machine->interrupt->SetStatus(old_status);
+void Semaphore::P() {
+#ifndef ETUDIANTS_TP
+    printf("**** Warning: method Semaphore::P is not implemented yet\n");
+    exit(-1);
+#endif
+#ifdef ETUDIANTS_TP
+    // disable interrupt, saving the previous state
+    IntStatus old_status = g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
+    // make the thread wait on the semaphore if its counter is null or below
+    if (value <= 0) {
+          this->queue->Append(g_current_thread);
+          g_current_thread->Sleep();
+    }
+    value--;
+    // restoring previous interrupt state
+    g_machine->interrupt->SetStatus(old_status);
+#endif
 }
 
 
@@ -97,17 +100,23 @@ Semaphore::P() {
 //	are disabled when it is called.
 */
 //----------------------------------------------------------------------
-void
-Semaphore::V() {
-  IntStatus old_status = g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
-  //printf("V on semaphore : %s %d \n", this->name, this->value);
-  void* nextThread = this->queue->Remove();
-  if (nextThread != nullptr) {
-    g_scheduler->ReadyToRun((Thread*) nextThread);
-  }
-  value++;
-
-  g_machine->interrupt->SetStatus(old_status);
+void Semaphore::V() {
+#ifndef ETUDIANTS_TP
+    printf("**** Warning: method Semaphore::V is not implemented yet\n");
+    exit(-1);
+#endif
+#ifdef ETUDIANTS_TP
+    // disable interrupt, saving the previous state
+    IntStatus old_status = g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
+    // if there's a thread waiting, free it and mark it as ready
+    void* nextThread = this->queue->Remove();
+    if (nextThread != nullptr) {
+        g_scheduler->ReadyToRun((Thread*) nextThread);
+    }
+    value++;
+    // restoring previous interrupt state
+    g_machine->interrupt->SetStatus(old_status);
+#endif
 }
 
 
@@ -119,12 +128,12 @@ Semaphore::V() {
 */
 //----------------------------------------------------------------------
 Lock::Lock(char* debugName) {
-  name = new char[strlen(debugName)+1];
-  strcpy(name,debugName);
-  sleepqueue = new Listint;
-  free = true;
-  owner = NULL;
-  type = LOCK_TYPE;
+    name = new char[strlen(debugName)+1];
+    strcpy(name,debugName);
+    sleepqueue = new Listint;
+    free = true;
+    owner = NULL;
+    type = LOCK_TYPE;
 }
 
 
@@ -135,10 +144,10 @@ Lock::Lock(char* debugName) {
 */
 //----------------------------------------------------------------------
 Lock::~Lock() {
-  type = INVALID_TYPE;
-  ASSERT(sleepqueue->IsEmpty());
-  delete [] name;
-  delete sleepqueue;
+    type = INVALID_TYPE;
+    ASSERT(sleepqueue->IsEmpty());
+    delete [] name;
+    delete sleepqueue;
 }
 
 //----------------------------------------------------------------------
@@ -153,17 +162,22 @@ Lock::~Lock() {
 */
 //----------------------------------------------------------------------
 void Lock::Acquire() {
-  IntStatus old_status = g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
-  if (free == true) {
-    free = false;
-    owner = g_current_thread;
-  }
-  else {
-    sleepqueue->Append((void*) g_current_thread);
-    g_current_thread->Sleep();
-    printf("Thread blocked on lock.\n");
-  }
-  g_machine->interrupt->SetStatus(old_status);
+#ifndef ETUDIANTS_TP
+    printf("**** Warning: method Lock::Acquire is not implemented yet\n");
+    exit(-1);
+#endif
+#ifdef ETUDIANTS_TP
+    IntStatus old_status = g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
+    if (free == true) {
+        free = false;
+        owner = g_current_thread;
+    } else {
+        sleepqueue->Append((void*) g_current_thread);
+        g_current_thread->Sleep();
+        printf("Thread blocked on lock.\n");
+    }
+    g_machine->interrupt->SetStatus(old_status);
+#endif
 }
 
 
@@ -178,24 +192,28 @@ void Lock::Acquire() {
 //----------------------------------------------------------------------
 
 void Lock::Release() {
-  IntStatus old_status = g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
+#ifndef ETUDIANTS_TP
+    printf("**** Warning: method Lock::Release is not implemented yet\n");
+    exit(-1);
+#endif
+#ifdef ETUDIANTS_TP
+    IntStatus old_status = g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
 
+    if (isHeldByCurrentThread()) {
+        if (sleepqueue->IsEmpty()) {
+            free = true;
+            owner = NULL;
+        } else {
+            Thread* nextThread = (Thread*) sleepqueue->Remove();
+            owner = nextThread;
+            g_scheduler->ReadyToRun(nextThread);
+        }
+    } else {
+        printf("g_current_thread is not the owner of this lock.");
+    }
+    g_machine->interrupt->SetStatus(old_status);
+#endif
 
-  if (isHeldByCurrentThread()) {
-    if (sleepqueue->IsEmpty()) {
-      free = true;
-      owner = NULL;
-    }
-    else {
-      Thread* nextThread = (Thread*) sleepqueue->Remove();
-      owner = nextThread;
-      g_scheduler->ReadyToRun(nextThread);
-    }
-  }
-  else {
-    printf("g_current_thread is not the owner of this lock.");
-  }
-  g_machine->interrupt->SetStatus(old_status);
 }
 
 
@@ -204,7 +222,9 @@ void Lock::Release() {
 /*! To check if current thread hold the lock
 */
 //----------------------------------------------------------------------
-bool Lock::isHeldByCurrentThread() {return (g_current_thread == owner);}
+bool Lock::isHeldByCurrentThread() {
+    return (g_current_thread == owner);
+}
 
 //----------------------------------------------------------------------
 // Condition::Condition
@@ -240,11 +260,17 @@ Condition::~Condition() {
 */
 //----------------------------------------------------------------------
 void Condition::Wait() {
-  IntStatus old_status = g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
+#ifndef ETUDIANTS_TP
+    printf("**** Warning: method Condition::Wait is not implemented yet\n");
+    exit(-1);
+#endif
+#ifdef ETUDIANTS_TP
+    IntStatus old_status = g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
 
-  waitqueue->Append((void*) g_current_thread);
-  g_current_thread->Sleep();
-  g_machine->interrupt->SetStatus(old_status);
+    waitqueue->Append((void*) g_current_thread);
+    g_current_thread->Sleep();
+    g_machine->interrupt->SetStatus(old_status);
+#endif
 }
 
 //----------------------------------------------------------------------
@@ -254,13 +280,19 @@ void Condition::Wait() {
 */
 //----------------------------------------------------------------------
 void Condition::Signal() {
-  IntStatus old_status = g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
+#ifndef ETUDIANTS_TP
+    printf("**** Warning: method Condition::Signal is not implemented yet\n");
+    exit(-1);
+#endif
+#ifdef ETUDIANTS_TP
+    IntStatus old_status = g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
 
-  if (not(waitqueue->IsEmpty())) {
-      Thread* nextThread = (Thread*) waitqueue->Remove();
-      g_scheduler->ReadyToRun(nextThread);
+    if (not(waitqueue->IsEmpty())) {
+        Thread* nextThread = (Thread*) waitqueue->Remove();
+        g_scheduler->ReadyToRun(nextThread);
     }
-  g_machine->interrupt->SetStatus(old_status);
+    g_machine->interrupt->SetStatus(old_status);
+#endif
 }
 
 //----------------------------------------------------------------------
@@ -270,11 +302,17 @@ void Condition::Signal() {
 */
 //----------------------------------------------------------------------
 void Condition::Broadcast() {
-  IntStatus old_status = g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
+#ifndef ETUDIANTS_TP
+    printf("**** Warning: method Condition::Broadcast is not implemented yet\n");
+    exit(-1);
+#endif
+#ifdef ETUDIANTS_TP
+    IntStatus old_status = g_machine->interrupt->SetStatus(IntStatus::INTERRUPTS_OFF);
 
-  while (not(waitqueue->IsEmpty())) {
-      Thread* nextThread = (Thread*) waitqueue->Remove();
-      g_scheduler->ReadyToRun(nextThread);
+    while (not(waitqueue->IsEmpty())) {
+        Thread* nextThread = (Thread*) waitqueue->Remove();
+        g_scheduler->ReadyToRun(nextThread);
     }
-  g_machine->interrupt->SetStatus(old_status);
+    g_machine->interrupt->SetStatus(old_status);
+#endif
 }
