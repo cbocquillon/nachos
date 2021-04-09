@@ -37,6 +37,11 @@
 //-------------------------------------------------------------------------
 
 DriverACIA::DriverACIA() {
+#ifndef ETUDIANTS_TP
+    printf("**** Warning: contructor of the ACIA driver not implemented yet\n");
+    exit(-1);
+#endif
+#ifdef ETUDIANTS_TP
     if (g_cfg->ACIA == ACIA_INTERRUPT) {
         send_sema = new Semaphore("send_sema", 1);
         receive_sema = new Semaphore("receive_sema", 0);
@@ -47,6 +52,7 @@ DriverACIA::DriverACIA() {
     } else {
 
     }
+#endif
 }
 
 //-------------------------------------------------------------------------
@@ -56,6 +62,13 @@ DriverACIA::DriverACIA() {
 //-------------------------------------------------------------------------
 
 int DriverACIA::TtySend(char* buff) {
+#ifndef ETUDIANTS_TP
+    printf("**** Warning: method Tty_Send of the ACIA driver not implemented yet\n");
+    exit(-1);
+
+    return 0;
+#endif
+#ifdef ETUDIANTS_TP
     DEBUG('i', "Call to TtySend\n");
     send_sema->P();
     int i = 0;
@@ -68,6 +81,7 @@ int DriverACIA::TtySend(char* buff) {
     ind_send = 0;
     //printf("Sending : %c\n", send_buffer[0]);
     g_machine->acia->PutChar(send_buffer[0]);
+#endif
 }
 
 //-------------------------------------------------------------------------
@@ -78,6 +92,13 @@ int DriverACIA::TtySend(char* buff) {
 //-------------------------------------------------------------------------
 
 int DriverACIA::TtyReceive(char* buff,int lg) {
+#ifndef ETUDIANTS_TP
+    printf("**** Warning: method Tty_Send of the ACIA driver not implemented yet\n");
+    exit(-1);
+
+    return 0;
+#endif
+#ifdef ETUDIANTS_TP
     DEBUG('i', "Call to TtyReceive\n");
     receive_sema->P();
     int borne = lg;//min(lg, ind_rec);
@@ -86,6 +107,7 @@ int DriverACIA::TtyReceive(char* buff,int lg) {
     }
     //buff[borne-1] = '\0';
     ind_rec = 0;
+#endif
 }
 
 //-------------------------------------------------------------------------
@@ -97,13 +119,19 @@ int DriverACIA::TtyReceive(char* buff,int lg) {
 //-------------------------------------------------------------------------
 
 void DriverACIA::InterruptSend() {
-  if (send_buffer[ind_send] != '\0') {
-    ind_send++;
-    //printf("Sending : %c %d\n", send_buffer[ind_send], send_buffer[ind_send]);
-    g_machine->acia->PutChar(send_buffer[ind_send]);
-  } else {
-    send_sema->V();
-  }
+#ifndef ETUDIANTS_TP
+    printf("**** Warning: send interrupt handler not implemented yet\n");
+    exit(-1);
+#endif
+#ifdef ETUDIANTS_TP
+    if (send_buffer[ind_send] != '\0') {
+        ind_send++;
+        //printf("Sending : %c %d\n", send_buffer[ind_send], send_buffer[ind_send]);
+        g_machine->acia->PutChar(send_buffer[ind_send]);
+    } else {
+        send_sema->V();
+    }
+#endif
 }
 
 //-------------------------------------------------------------------------
@@ -117,6 +145,11 @@ void DriverACIA::InterruptSend() {
 //-------------------------------------------------------------------------
 
 void DriverACIA::InterruptReceive() {
+#ifndef ETUDIANTS_TP
+    printf("**** Warning: receive interrupt handler not implemented yet\n");
+    exit(-1);
+#endif
+#ifdef ETUDIANTS_TP
     //printf("Receive : %c %d\n", receive_buffer[ind_rec], receive_buffer[ind_rec]);
     receive_buffer[ind_rec] = g_machine->acia->GetChar();
     if (receive_buffer[ind_rec] == '\0') {
@@ -124,4 +157,5 @@ void DriverACIA::InterruptReceive() {
     } else {
         ind_rec++;
     }
+#endif
 }

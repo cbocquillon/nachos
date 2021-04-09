@@ -3,8 +3,8 @@ Routines for the page fault managerPage Fault Manager
 */
 //
 //  Copyright (c) 1999-2000 INSA de Rennes.
-//  All rights reserved.  
-//  See copyright_insa.h for copyright notice and limitation 
+//  All rights reserved.
+//  See copyright_insa.h for copyright notice and limitation
 //  of liability and disclaimer of warranty provisions.
 //
 
@@ -23,8 +23,8 @@ PageFaultManager::~PageFaultManager() {
 }
 
 // ExceptionType PageFault(uint32_t virtualPage)
-/*! 	
-//	This method is called by the Memory Management Unit when there is a 
+/*!
+//	This method is called by the Memory Management Unit when there is a
 //      page fault. This method loads the page from :
 //      - read-only sections (text,rodata) $\Rightarrow$ executive
 //        file
@@ -38,16 +38,53 @@ PageFaultManager::~PageFaultManager() {
 //        size of the address space, and supposed to correspond to a
 //        page mapped to something [code/data/bss/...])
 //	\return the exception (generally the NO_EXCEPTION constant)
-*/  
-ExceptionType PageFaultManager::PageFault(uint32_t virtualPage) 
-{
-  printf("**** Warning: page fault manager is not implemented yet\n");
+*/
+ExceptionType PageFaultManager::PageFault(uint32_t virtualPage) {
+#ifndef ETUDIANTS_TP
+    printf("**** Warning: page fault manager is not implemented yet\n");
     exit(-1);
     return ((ExceptionType)0);
+#endif
+#ifdef ETUDIANTS_TP
+    /*
+
+    // Get a page in physical memory, halt of there is not sufficient space
+    int pp = g_physical_mem_manager->FindFreePage();
+    if (pp == -1) {
+        printf("Not enough free space to load program %s\n", exec_file->GetName());
+        g_machine->interrupt->Halt(-1);
+    }
+
+    // TODO : getter for address space in Thread
+    AddrSpace* process_addrspace = g_current_thread->getAddrSpace();
+    TranslationTable* translation_table = process_addrspace->translationTable;
+
+    g_physical_mem_manager->tpr[pp].virtualPage = virt_page;
+    g_physical_mem_manager->tpr[pp].owner = process_addrspace;
+    g_physical_mem_manager->tpr[pp].locked = true;
+    translation_table->setPhysicalPage(virt_page, pp);
+
+    // The SHT_NOBITS flag indicates if the section has an image
+    // in the executable file (text or data section) or not
+    // (bss section)
+    if (section_table[i].sh_type != SHT_NOBITS) {
+      // The section has an image in the executable file
+      // Read it from the disk
+      exec_file->ReadAt((char *)&(g_machine->mainMemory[translationTable->getPhysicalPage(virt_page)*g_cfg->PageSize]),
+          g_cfg->PageSize, section_table[i].sh_offset + pgdisk*g_cfg->PageSize);
+    } else {
+      // The section does not have an image in the executable
+      // Fill it with zeroes
+      memset(&(g_machine->mainMemory[translationTable->getPhysicalPage(virt_page)*g_cfg->PageSize]),
+          0, g_cfg->PageSize);
+    }
+
+    // The page has been loded in physical memory but
+    // later-on will be saved in the swap disk. We have to indicate this
+    // in the translation table
+    translationTable->setAddrDisk(virt_page,-1);
+    // The entry is valid
+    translationTable->setBitValid(virt_page);
+    */
+ #endif
 }
-
-
-
-
-
-

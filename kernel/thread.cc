@@ -357,6 +357,14 @@ void Thread::Sleep () {
     g_scheduler->SwitchTo(nextThread);
 }
 
+/*
+#ifdef ETUDIANTS_TP
+AddrSpace* Thread::getAddrSpace() {
+    return process->addrspace;
+}
+#endif
+*/
+
 //----------------------------------------------------------------------
 // Thread::SaveProcessorState
 /*!	Save the CPU state of a user program on a context switch
