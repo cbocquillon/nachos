@@ -46,45 +46,43 @@ ExceptionType PageFaultManager::PageFault(uint32_t virtualPage) {
     return ((ExceptionType)0);
 #endif
 #ifdef ETUDIANTS_TP
-    /*
-
-    // Get a page in physical memory, halt of there is not sufficient space
-    int pp = g_physical_mem_manager->FindFreePage();
+    /* We're handling a page fault, aka the V bit in the translation table wasn't set.
+       This method needs to access the current thread's translation table.
+       Then:
+        - Load the missing page from the disk. The appropriate disk sector addr
+          is stored in the translation table. If this address is -1, fill with 0
+          (we'll worry about the swap later...)
+        - Look for a free page in the physical page table
+        - Set all the appropriate info in the tables
+    */
+    Process* process = g_current_thread->GetProcessOwner();
+    OpenFile* exec_file = process->exec_file;
+    TranslationTable* translation_table = process->addrspace->translationTable;
+    // Get a page in physical memory, halt if there isn't enough space
+    // Don't forget to unlock the page at the end of the page fault handler !
+    int pp = g_physical_mem_manager->AddPhysicalToVirtualMapping(process->addrspace, virtualPage);
     if (pp == -1) {
         printf("Not enough free space to load program %s\n", exec_file->GetName());
         g_machine->interrupt->Halt(-1);
     }
+    translation_table->setPhysicalPage(virtualPage, pp);
 
-    // TODO : getter for address space in Thread
-    AddrSpace* process_addrspace = g_current_thread->getAddrSpace();
-    TranslationTable* translation_table = process_addrspace->translationTable;
-
-    g_physical_mem_manager->tpr[pp].virtualPage = virt_page;
-    g_physical_mem_manager->tpr[pp].owner = process_addrspace;
-    g_physical_mem_manager->tpr[pp].locked = true;
-    translation_table->setPhysicalPage(virt_page, pp);
-
-    // The SHT_NOBITS flag indicates if the section has an image
-    // in the executable file (text or data section) or not
-    // (bss section)
-    if (section_table[i].sh_type != SHT_NOBITS) {
-      // The section has an image in the executable file
-      // Read it from the disk
-      exec_file->ReadAt((char *)&(g_machine->mainMemory[translationTable->getPhysicalPage(virt_page)*g_cfg->PageSize]),
-          g_cfg->PageSize, section_table[i].sh_offset + pgdisk*g_cfg->PageSize);
+    if (translation_table->getAddrDisk(virtualPage) != -1) {
+        exec_file->ReadAt(
+            (char*)&(g_machine->mainMemory[pp*g_cfg->PageSize]),
+            g_cfg->PageSize,
+            translation_table->getAddrDisk(virtualPage));
     } else {
-      // The section does not have an image in the executable
-      // Fill it with zeroes
-      memset(&(g_machine->mainMemory[translationTable->getPhysicalPage(virt_page)*g_cfg->PageSize]),
-          0, g_cfg->PageSize);
+        memset(
+            &(g_machine->mainMemory[pp*g_cfg->PageSize]),
+            0, g_cfg->PageSize);
     }
 
-    // The page has been loded in physical memory but
-    // later-on will be saved in the swap disk. We have to indicate this
-    // in the translation table
-    translationTable->setAddrDisk(virt_page,-1);
-    // The entry is valid
-    translationTable->setBitValid(virt_page);
-    */
- #endif
+
+    translation_table->setAddrDisk(virtualPage,-1);
+    translation_table->setBitValid(virtualPage);
+    g_physical_mem_manager->UnlockPage((int)pp);
+
+    return NO_EXCEPTION;
+#endif
 }

@@ -175,6 +175,7 @@ AddrSpace::AddrSpace(OpenFile * exec_file, Process *p, int *err) {
             virt_page = section_table[i].sh_addr / g_cfg->PageSize;
             pgdisk < divRoundUp(section_table[i].sh_size, g_cfg->PageSize);
             pgdisk++, virt_page ++) {
+#ifndef ETUDIANTS_TP
             /* Without demand paging */
 
             // Set up default values for the page table entry
@@ -187,7 +188,6 @@ AddrSpace::AddrSpace(OpenFile * exec_file, Process *p, int *err) {
 
             translationTable->clearBitIo(virt_page);
 
-#ifndef ETUDIANTS_TP
             // Get a page in physical memory, halt of there is not sufficient space
             int pp = g_physical_mem_manager->FindFreePage();
             if (pp == -1) {
@@ -214,7 +214,6 @@ AddrSpace::AddrSpace(OpenFile * exec_file, Process *p, int *err) {
               memset(&(g_machine->mainMemory[translationTable->getPhysicalPage(virt_page)*g_cfg->PageSize]),
                   0, g_cfg->PageSize);
             }
-
             // The page has been loded in physical memory but
             // later-on will be saved in the swap disk. We have to indicate this
             // in the translation table
@@ -224,10 +223,26 @@ AddrSpace::AddrSpace(OpenFile * exec_file, Process *p, int *err) {
             /* End of code without demand paging */
 #endif
 #ifdef ETUDIANTS_TP
-            // We clear the valid bit and set the disk address to disk page where the executable can be read
-            // We will then be able to catch page defaults, resolve them just like above
+            // Set up default values for the page table entry
+            translationTable->clearBitSwap(virt_page);
+            translationTable->clearBitIo(virt_page);
+            translationTable->setBitReadAllowed(virt_page);
+            // Set the writing right bit for this section
+            if (section_table[i].sh_flags & SHF_WRITE)
+                translationTable->setBitWriteAllowed(virt_page);
+            else
+                translationTable->clearBitWriteAllowed(virt_page);
+
+            if (section_table[i].sh_type != SHT_NOBITS) {
+                // if the section has an image on the disk (for example : code, data)
+                // we set the AddrDisk field to the appropriate value
+                translationTable->setAddrDisk(virt_page, section_table[i].sh_offset + pgdisk*g_cfg->PageSize);
+            } else {
+                // if it doesn't, set the field at -1 so we fill it with 0 later
+                translationTable->setAddrDisk(virt_page, -1);
+            }
+            // and set V to 0
             translationTable->clearBitValid(virt_page);
-            translationTable->setAddrDisk(virt_page, pgdisk);
 #endif
         }
 
@@ -331,6 +346,12 @@ int AddrSpace::StackAllocate(void) {
         /* End of code without demand paging */
 #endif
 #ifdef ETUDIANTS_TP
+        translationTable->clearBitSwap(i);
+        translationTable->clearBitIo(i);
+        translationTable->setBitReadAllowed(i);
+        translationTable->setBitWriteAllowed(i);
+        // Set the disk address at -1 so we know we must fill the page with 0
+        translationTable->setAddrDisk(i, -1);
         translationTable->clearBitValid(i);
 #endif
     }

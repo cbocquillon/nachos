@@ -4,8 +4,8 @@
 */
 //
 //  Copyright (c) 1999-2000 INSA de Rennes.
-//  All rights reserved.  
-//  See copyright_insa.h for copyright notice and limitation 
+//  All rights reserved.
+//  See copyright_insa.h for copyright notice and limitation
 //  of liability and disclaimer of warranty provisions.
 //-----------------------------------------------------------------
 
@@ -54,14 +54,14 @@ PhysicalMemManager::~PhysicalMemManager() {
 */
 //-----------------------------------------------------------------
 void PhysicalMemManager::RemovePhysicalToVirtualMapping(long num_page) {
-  
-  // Check that the page is not already free 
+
+  // Check that the page is not already free
   ASSERT(!tpr[num_page].free);
 
   // Update the physical page table entry
   tpr[num_page].free=true;
   tpr[num_page].locked=false;
-  if (tpr[num_page].owner->translationTable!=NULL) 
+  if (tpr[num_page].owner->translationTable!=NULL)
     tpr[num_page].owner->translationTable->clearBitValid(tpr[num_page].virtualPage);
 
   // Insert the page in the free list
@@ -104,7 +104,7 @@ void PhysicalMemManager::ChangeOwner(long numPage, Thread* owner) {
 }
 
 //-----------------------------------------------------------------
-// PhysicalMemManager::AddPhysicalToVirtualMapping 
+// PhysicalMemManager::AddPhysicalToVirtualMapping
 //
 /*! This method returns a new physical page number. If there is no
 //  page available, it evicts one page (page replacement algorithm).
@@ -118,11 +118,26 @@ void PhysicalMemManager::ChangeOwner(long numPage, Thread* owner) {
 //  \return A new physical page number.
 */
 //-----------------------------------------------------------------
-int PhysicalMemManager::AddPhysicalToVirtualMapping(AddrSpace* owner,int virtualPage) 
-{
-  printf("**** Warning: function AddPhysicalToVirtualMapping is not implemented\n");
-  exit(-1);
-  return (0);
+int PhysicalMemManager::AddPhysicalToVirtualMapping(AddrSpace* owner,int virtualPage) {
+#ifndef ETUDIANTS_TP
+    printf("**** Warning: function AddPhysicalToVirtualMapping is not implemented\n");
+    exit(-1);
+    return (0);
+#endif
+#ifdef ETUDIANTS_TP
+    // Find a free page, return if there's none
+    int pp = FindFreePage();
+    if (pp == -1) {
+      printf("Could not find free page.\n");
+      return -1;
+    }
+    // Set the fields in the physical page table
+    tpr[pp].locked = true;
+    tpr[pp].virtualPage = virtualPage;
+    tpr[pp].owner = owner;
+
+    return pp;
+#endif
 }
 
 //-----------------------------------------------------------------
@@ -143,13 +158,13 @@ int PhysicalMemManager::FindFreePage() {
 
   // Update statistics
   g_current_thread->GetProcessOwner()->stat->incrMemoryAccess();
-  
+
   // Get a page from the free list
   page = (int64_t)free_page_list.Remove();
-  
+
   // Check that the page is really free
   ASSERT(tpr[page].free);
-  
+
   // Update the physical page table
   tpr[page].free = false;
 

@@ -869,6 +869,7 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
   case PAGEFAULT_EXCEPTION:
     ExceptionType e;
     e = g_page_fault_manager->PageFault(vaddr / g_cfg->PageSize);
+    printf(">>> Handling page fault: addr=0x%x, Page #%d\n", vaddr, vaddr / g_cfg->PageSize);
     if (e!=NO_EXCEPTION) {
       printf("\t*** Page fault handling failed, ... exiting\n");
       g_machine->interrupt->Halt(ERROR);
