@@ -128,10 +128,51 @@ int PhysicalMemManager::AddPhysicalToVirtualMapping(AddrSpace* owner,int virtual
     // Find a free page, return if there's none
     int pp = FindFreePage();
     if (pp == -1) {
-      printf("Could not find free page.\n");
-      return -1;
+        // no free page found, evict one
+        pp = EvictPage();
+        if (pp == -1) {
+            // normally this shouldn't happen ?...
+            printf("Could not find free page or evict one. (Swap full ?)\n");
+            return -1;
+        }
+        // aliases to make life easier
+        TranslationTable* prev_owner = tpr[pp].owner->translationTable;
+        int prev_page = tpr[pp].virtualPage;
+
+        // locking the page in case of nested page miss
+        tpr[pp].locked = true;
+        // invalidating previous owner entry
+        prev_owner->setPhysicalPage(prev_page, -1);
+        prev_owner->clearBitValid(prev_page);
+        printf("Replacing page #%d in TPR[%d] with page #%d.\n", prev_page, pp, virtualPage);
+
+        // previous page was modified, copy it on a swap sector
+        if (prev_owner->getBitM(prev_page)) {
+            // check if previous page already has a sector on the swap
+            if(prev_owner->getBitSwap(prev_page)) {
+                int swap_sector = prev_owner->getAddrDisk(prev_page);
+                // set AddrDisk to invalid while we copy the page
+                prev_owner->setAddrDisk(prev_page, -1);
+                // copy the page in the swap
+                g_swap_manager->PutPageSwap(
+                    swap_sector,
+                    (char*)&(g_machine->mainMemory[pp*g_cfg->PageSize]));
+                // restore the AddrDisk field
+                prev_owner->setAddrDisk(prev_page, swap_sector);
+            } else {
+                prev_owner->setAddrDisk(prev_page, -1);
+                // copy the page in the swap in a newly allocated sector&
+                int swap_sector = g_swap_manager->PutPageSwap(
+                    -1,   // let the swap manager choose and return a sector
+                    (char*)&(g_machine->mainMemory[pp*g_cfg->PageSize]));
+                prev_owner->setAddrDisk(prev_page, swap_sector);
+            }
+            prev_owner->setBitSwap(prev_page);
+            prev_owner->clearBitM(prev_page);
+        }
     }
-    // Set the fields in the physical page table
+
+    // Update the physical page entry
     tpr[pp].locked = true;
     tpr[pp].virtualPage = virtualPage;
     tpr[pp].owner = owner;
@@ -150,25 +191,21 @@ int PhysicalMemManager::AddPhysicalToVirtualMapping(AddrSpace* owner,int virtual
 */
 //-----------------------------------------------------------------
 int PhysicalMemManager::FindFreePage() {
-  int64_t page;
+    int64_t page;
+    // Check that the free list is not empty
+    if (free_page_list.IsEmpty())
+        return -1;
 
-  // Check that the free list is not empty
-  if (free_page_list.IsEmpty())
-    return -1;
+    // Update statistics
+    g_current_thread->GetProcessOwner()->stat->incrMemoryAccess();
+    // Get a page from the free list
+    page = (int64_t)free_page_list.Remove();
+    // Check that the page is really free
+    ASSERT(tpr[page].free);
+    // Update the physical page table
+    tpr[page].free = false;
 
-  // Update statistics
-  g_current_thread->GetProcessOwner()->stat->incrMemoryAccess();
-
-  // Get a page from the free list
-  page = (int64_t)free_page_list.Remove();
-
-  // Check that the page is really free
-  ASSERT(tpr[page].free);
-
-  // Update the physical page table
-  tpr[page].free = false;
-
-  return page;
+    return page;
 }
 
 //-----------------------------------------------------------------
@@ -181,9 +218,29 @@ int PhysicalMemManager::FindFreePage() {
 */
 //-----------------------------------------------------------------
 int PhysicalMemManager::EvictPage() {
-  printf("**** Warning: page replacement algorithm is not implemented yet\n");
+#ifndef ETUDIANTS_TP
+    printf("**** Warning: page replacement algorithm is not implemented yet\n");
     exit(-1);
     return (0);
+#endif
+#ifdef ETUDIANTS_TP
+    int i = i_clock + 1;
+    int chosen_page = i_clock + 1;
+
+    while (true) {
+        if (!tpr[i].locked && !tpr[i].owner->translationTable->getBitU(tpr[i].virtualPage)) {
+            chosen_page = i;
+            break;
+        } else {
+            tpr[i].owner->translationTable->clearBitU(tpr[i].virtualPage);
+        }
+        i = (i+1)%g_cfg->NumPhysPages;
+    }
+
+    i_clock = chosen_page;
+    return chosen_page;
+
+#endif
 }
 
 //-----------------------------------------------------------------

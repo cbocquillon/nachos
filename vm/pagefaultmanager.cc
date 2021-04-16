@@ -66,19 +66,28 @@ ExceptionType PageFaultManager::PageFault(uint32_t virtualPage) {
         g_machine->interrupt->Halt(-1);
     }
     translation_table->setPhysicalPage(virtualPage, pp);
-
-    if (translation_table->getAddrDisk(virtualPage) != -1) {
-        exec_file->ReadAt(
-            (char*)&(g_machine->mainMemory[pp*g_cfg->PageSize]),
-            g_cfg->PageSize,
-            translation_table->getAddrDisk(virtualPage));
+    printf("Page #%d is ", virtualPage);
+    if (translation_table->getBitSwap(virtualPage)) {
+        printf("in swap.\n");
+        while (translation_table->getAddrDisk(virtualPage) == -1) {
+        }
+        g_swap_manager->GetPageSwap(
+            translation_table->getAddrDisk(virtualPage),
+            (char*)&(g_machine->mainMemory[pp*g_cfg->PageSize]));
     } else {
-        memset(
-            &(g_machine->mainMemory[pp*g_cfg->PageSize]),
-            0, g_cfg->PageSize);
+        if (translation_table->getAddrDisk(virtualPage) != -1) {
+            printf("in exec file.\n");
+            exec_file->ReadAt(
+                (char*)&(g_machine->mainMemory[pp*g_cfg->PageSize]),
+                g_cfg->PageSize,
+                translation_table->getAddrDisk(virtualPage));
+        } else {
+            printf("an anonymous section filled with 0.\n");
+            memset(
+                &(g_machine->mainMemory[pp*g_cfg->PageSize]),
+                0, g_cfg->PageSize);
+        }
     }
-
-
     translation_table->setAddrDisk(virtualPage,-1);
     translation_table->setBitValid(virtualPage);
     g_physical_mem_manager->UnlockPage((int)pp);
