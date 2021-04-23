@@ -627,9 +627,10 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
     #ifdef ETUDIANTS_TP
     case SC_P:{
       int sem_id = g_machine->ReadIntRegister(4);
+      //printf("SEMA ID: %d\n", sem_id);
       Semaphore* sema = (Semaphore*) g_object_ids->SearchObject(sem_id);
       // Now we check if the object we have is actually a semaphore
-      if (sema->type == SEMAPHORE_TYPE) {
+      if (sema != nullptr && sema->type == SEMAPHORE_TYPE) {
         sema->P();
         g_machine->WriteIntRegister(2,NO_ERROR);
       } else {
@@ -642,14 +643,15 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
 
     case SC_V:{
       int sem_id = g_machine->ReadIntRegister(4);
+      //printf("SEMA ID: %d\n", sem_id);
       Semaphore* sema = (Semaphore*) g_object_ids->SearchObject(sem_id);
       // Now we check if the object we have is actually a semaphore
-      if (sema->type == SEMAPHORE_TYPE) {
+      if (sema != nullptr && sema->type == SEMAPHORE_TYPE) {
         sema->V();
         g_machine->WriteIntRegister(2,NO_ERROR);
       } else {
         g_machine->WriteIntRegister(2,ERROR);
-	g_syscall_error->SetMsg((char*)"",INVALID_SEMAPHORE_ID);
+	    g_syscall_error->SetMsg((char*)"",INVALID_SEMAPHORE_ID);
       }
 
       break;
@@ -665,7 +667,7 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
       // Creating and adding the new semaphore
       Semaphore* pt_sema = new Semaphore(ch, init_count);
       int32_t sema_id = g_object_ids->AddObject(pt_sema);
-      // returning its ID. That's it, no sanity checks needed ???
+      // returning its ID... no sanity checks needed ?
       g_machine->WriteIntRegister(2, sema_id);
       break;
     }
@@ -674,13 +676,13 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
       int sem_id = g_machine->ReadIntRegister(4);
       Semaphore* sema = (Semaphore*) g_object_ids->SearchObject(sem_id);
 
-      if (sema->type == SEMAPHORE_TYPE) {
+      if (sema != nullptr && sema->type == SEMAPHORE_TYPE) {
         g_object_ids->RemoveObject(sem_id);
         g_machine->WriteIntRegister(2, NO_ERROR);
         delete sema;
       } else {
         g_machine->WriteIntRegister(2,ERROR);
-	g_syscall_error->SetMsg((char*)"",INVALID_SEMAPHORE_ID);
+	    g_syscall_error->SetMsg((char*)"",INVALID_SEMAPHORE_ID);
       }
 
       break;
@@ -702,7 +704,7 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
       int lock_id = g_machine->ReadIntRegister(4);
       Lock* pt_lock = (Lock*) g_object_ids->SearchObject(lock_id);
 
-      if (pt_lock->type == LOCK_TYPE) {
+      if (pt_lock != nullptr && pt_lock->type == LOCK_TYPE) {
         g_object_ids->RemoveObject(lock_id);
         g_machine->WriteIntRegister(2, NO_ERROR);
         delete pt_lock;
@@ -716,7 +718,7 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
     case SC_LOCK_ACQUIRE:{
       int lock_id = g_machine->ReadIntRegister(4);
       Lock* pt_lock = (Lock*) g_object_ids->SearchObject(lock_id);
-      if (pt_lock->type == LOCK_TYPE) {
+      if (pt_lock != nullptr && pt_lock->type == LOCK_TYPE) {
         pt_lock->Acquire();
         g_machine->WriteIntRegister(2,NO_ERROR);
       } else {
@@ -729,7 +731,7 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
     case SC_LOCK_RELEASE:{
       int lock_id = g_machine->ReadIntRegister(4);
       Lock* pt_lock = (Lock*) g_object_ids->SearchObject(lock_id);
-      if (pt_lock->type == LOCK_TYPE) {
+      if (pt_lock != nullptr && pt_lock->type == LOCK_TYPE) {
         pt_lock->Release();
         g_machine->WriteIntRegister(2,NO_ERROR);
       } else {
@@ -755,7 +757,7 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
       int cond_id = g_machine->ReadIntRegister(4);
       Condition* pt_cond = (Condition*) g_object_ids->SearchObject(cond_id);
 
-      if (pt_cond->type == CONDITION_TYPE) {
+      if (pt_cond != nullptr && pt_cond->type == CONDITION_TYPE) {
         g_object_ids->RemoveObject(cond_id);
         g_machine->WriteIntRegister(2, NO_ERROR);
         delete pt_cond;
@@ -769,7 +771,7 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
     case SC_COND_WAIT:{
       int cond_id = g_machine->ReadIntRegister(4);
       Condition* pt_cond = (Condition*) g_object_ids->SearchObject(cond_id);
-      if (pt_cond->type == CONDITION_TYPE) {
+      if (pt_cond != nullptr && pt_cond->type == CONDITION_TYPE) {
         pt_cond->Wait();
         g_machine->WriteIntRegister(2,NO_ERROR);
       } else {
@@ -782,7 +784,7 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
     case SC_COND_SIGNAL:{
       int cond_id = g_machine->ReadIntRegister(4);
       Condition* pt_cond = (Condition*) g_object_ids->SearchObject(cond_id);
-      if (pt_cond->type == CONDITION_TYPE) {
+      if (pt_cond != nullptr && pt_cond->type == CONDITION_TYPE) {
         pt_cond->Signal();
         g_machine->WriteIntRegister(2,NO_ERROR);
       } else {
@@ -795,7 +797,7 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
     case SC_COND_BROADCAST:{
       int cond_id = g_machine->ReadIntRegister(4);
       Condition* pt_cond = (Condition*) g_object_ids->SearchObject(cond_id);
-      if (pt_cond->type == CONDITION_TYPE) {
+      if (pt_cond != nullptr && pt_cond->type == CONDITION_TYPE) {
         pt_cond->Broadcast();
         g_machine->WriteIntRegister(2,NO_ERROR);
       } else {
@@ -868,6 +870,7 @@ void ExceptionHandler(ExceptionType exceptiontype, int vaddr)
 
   case PAGEFAULT_EXCEPTION:
     ExceptionType e;
+    DEBUG('v',"> Handling page fault: 0x%x, page #%d\n", vaddr, vaddr/g_cfg->PageSize);
     e = g_page_fault_manager->PageFault(vaddr / g_cfg->PageSize);
     if (e!=NO_EXCEPTION) {
       printf("\t*** Page fault handling failed, ... exiting\n");

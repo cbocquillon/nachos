@@ -125,54 +125,50 @@ int PhysicalMemManager::AddPhysicalToVirtualMapping(AddrSpace* owner,int virtual
     return (0);
 #endif
 #ifdef ETUDIANTS_TP
-    // Find a free page, return if there's none
+    /* We're binding a new virtual to a physical one.
+       If a physical page is free : set the right fields in the TPR entry
+       If not :
+       - Find an unused physical page using the clock algorithm
+       - Lock the page and check the Modified bit : copy the page in a new
+         swap sector if set, then set the Swap bit
+       - Clear the V bit in the evicted virtual page entry
+       - Set the right fields in the TPR entry
+    */
+
+    // find a free page
     int pp = FindFreePage();
+    // no free page found, evict one
     if (pp == -1) {
-        // no free page found, evict one
         pp = EvictPage();
         if (pp == -1) {
-            // normally this shouldn't happen ?...
+            // normally this shouldn't happen : clock algorithm loops forever
             printf("Could not find free page or evict one. (Swap full ?)\n");
             return -1;
         }
-        // aliases to make life easier
         TranslationTable* prev_owner = tpr[pp].owner->translationTable;
         int prev_page = tpr[pp].virtualPage;
 
         // locking the page in case of nested page miss
         tpr[pp].locked = true;
-        // invalidating previous owner entry
-        prev_owner->setPhysicalPage(prev_page, -1);
-        prev_owner->clearBitValid(prev_page);
-        printf("Replacing page #%d in TPR[%d] with page #%d.\n", prev_page, pp, virtualPage);
 
         // previous page was modified, copy it on a swap sector
         if (prev_owner->getBitM(prev_page)) {
-            // check if previous page already has a sector on the swap
-            if(prev_owner->getBitSwap(prev_page)) {
-                int swap_sector = prev_owner->getAddrDisk(prev_page);
-                // set AddrDisk to invalid while we copy the page
-                prev_owner->setAddrDisk(prev_page, -1);
-                // copy the page in the swap
-                g_swap_manager->PutPageSwap(
-                    swap_sector,
-                    (char*)&(g_machine->mainMemory[pp*g_cfg->PageSize]));
-                // restore the AddrDisk field
-                prev_owner->setAddrDisk(prev_page, swap_sector);
-            } else {
-                prev_owner->setAddrDisk(prev_page, -1);
-                // copy the page in the swap in a newly allocated sector&
-                int swap_sector = g_swap_manager->PutPageSwap(
-                    -1,   // let the swap manager choose and return a sector
-                    (char*)&(g_machine->mainMemory[pp*g_cfg->PageSize]));
-                prev_owner->setAddrDisk(prev_page, swap_sector);
-            }
             prev_owner->setBitSwap(prev_page);
-            prev_owner->clearBitM(prev_page);
+            prev_owner->setAddrDisk(prev_page, -1);
+            // copy the page in the swap in a newly allocated sector
+            int swap_sector = g_swap_manager->PutPageSwap(
+                -1,   // let the swap manager choose and return a sector
+                (char*)&(g_machine->mainMemory[pp*g_cfg->PageSize]));
+            prev_owner->setAddrDisk(prev_page, swap_sector);
         }
+        // invalidating previous owner entry
+        prev_owner->setPhysicalPage(prev_page, -1);
+        prev_owner->clearBitValid(prev_page);
+        DEBUG('v', "Replacing page #%d in TPR[%d] with page #%d.\n", prev_page, pp, virtualPage);
     }
 
     // Update the physical page entry
+    tpr[pp].free = false;
     tpr[pp].locked = true;
     tpr[pp].virtualPage = virtualPage;
     tpr[pp].owner = owner;
@@ -224,8 +220,9 @@ int PhysicalMemManager::EvictPage() {
     return (0);
 #endif
 #ifdef ETUDIANTS_TP
-    int i = i_clock + 1;
-    int chosen_page = i_clock + 1;
+    // initialized the next page after the page chosen in a previous eviction
+    int i = (i_clock+1)%g_cfg->NumPhysPages;
+    int chosen_page = (i_clock+1)%g_cfg->NumPhysPages;
 
     while (true) {
         if (!tpr[i].locked && !tpr[i].owner->translationTable->getBitU(tpr[i].virtualPage)) {

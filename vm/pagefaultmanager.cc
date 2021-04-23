@@ -49,47 +49,71 @@ ExceptionType PageFaultManager::PageFault(uint32_t virtualPage) {
     /* We're handling a page fault, aka the V bit in the translation table wasn't set.
        This method needs to access the current thread's translation table.
        Then:
-        - Load the missing page from the disk. The appropriate disk sector addr
-          is stored in the translation table. If this address is -1, fill with 0
-          (we'll worry about the swap later...)
-        - Look for a free page in the physical page table
-        - Set all the appropriate info in the tables
+       - Look for a free page in the physical page table
+       - Load the missing page from the disk:
+          + If it's in the swap, load it from there and clear Swap bit
+          + If not, then the appropriate disk address is stored in the translation table.
+            If this address is -1, then fill the page with 0
+       - Set all the appropriate info in the translation table
+
+       Concerning the greatest source of frustration, multi-threading:
+       - Another thread can start while we're handling a page fault with a disk IO.
+         If this thread asks for the same page, then it must yield to another thread for now
+       - If a thread asks for a page, while it was being written into the swap,
+         then this thread must yield (there's probably a more efficient way of doing this)
     */
     Process* process = g_current_thread->GetProcessOwner();
     OpenFile* exec_file = process->exec_file;
     TranslationTable* translation_table = process->addrspace->translationTable;
-    // Get a page in physical memory, halt if there isn't enough space
-    // Don't forget to unlock the page at the end of the page fault handler !
+
+    // waiting until the page isn't used for a disk IO, then set the bit
+    while (translation_table->getBitIo(virtualPage)) {
+        g_current_thread->Yield();
+    }
+    ASSERT(translation_table->getBitIo(virtualPage) == 0);
+    translation_table->setBitIo(virtualPage);
+
+    // get a page in physical memory, halt if there isn't enough space
+    // don't forget to unlock the page at the end of the page fault handler!
     int pp = g_physical_mem_manager->AddPhysicalToVirtualMapping(process->addrspace, virtualPage);
     if (pp == -1) {
         printf("Not enough free space to load program %s\n", exec_file->GetName());
         g_machine->interrupt->Halt(-1);
     }
-    translation_table->setPhysicalPage(virtualPage, pp);
-    printf("Page #%d is ", virtualPage);
+
+    // check if the page is in the swap
     if (translation_table->getBitSwap(virtualPage)) {
-        printf("in swap.\n");
+        DEBUG('v', "Page #%d is in swap at sector #%d.\n", virtualPage,
+            translation_table->getAddrDisk(virtualPage));
+        // wait for the completion of the swap write
         while (translation_table->getAddrDisk(virtualPage) == -1) {
+            g_current_thread->Yield();
         }
         g_swap_manager->GetPageSwap(
             translation_table->getAddrDisk(virtualPage),
-            (char*)&(g_machine->mainMemory[pp*g_cfg->PageSize]));
+            (char*) g_machine->mainMemory + pp*g_cfg->PageSize);
+        // release the swap sector
+        g_swap_manager->ReleasePageSwap(translation_table->getAddrDisk(virtualPage));
+        translation_table->clearBitSwap(virtualPage);
     } else {
         if (translation_table->getAddrDisk(virtualPage) != -1) {
-            printf("in exec file.\n");
+            DEBUG('v', "Page #%d is in exec file.\n", virtualPage);
             exec_file->ReadAt(
-                (char*)&(g_machine->mainMemory[pp*g_cfg->PageSize]),
+                (char*) g_machine->mainMemory + pp*g_cfg->PageSize,
                 g_cfg->PageSize,
                 translation_table->getAddrDisk(virtualPage));
         } else {
-            printf("an anonymous section filled with 0.\n");
-            memset(
-                &(g_machine->mainMemory[pp*g_cfg->PageSize]),
-                0, g_cfg->PageSize);
+            DEBUG('v', "Page #%d is an anonymous section.\n", virtualPage);
+            memset(g_machine->mainMemory + pp*g_cfg->PageSize,0, g_cfg->PageSize);
         }
     }
-    translation_table->setAddrDisk(virtualPage,-1);
+
+    // set the fields in the virtual page entry
+    translation_table->clearBitIo(virtualPage);
     translation_table->setBitValid(virtualPage);
+    translation_table->setPhysicalPage(virtualPage, pp);
+
+    // unlock the page, ready to be used
     g_physical_mem_manager->UnlockPage((int)pp);
 
     return NO_EXCEPTION;

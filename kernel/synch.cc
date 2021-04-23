@@ -174,7 +174,6 @@ void Lock::Acquire() {
     } else {
         sleepqueue->Append((void*) g_current_thread);
         g_current_thread->Sleep();
-        printf("Thread blocked on lock.\n");
     }
     g_machine->interrupt->SetStatus(old_status);
 #endif
