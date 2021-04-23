@@ -14,12 +14,13 @@ void producer() {
         P(mutex);
 
         buffer[prod_index] = i;
-        n_printf("Test %d\n", i);
+        n_printf("Producing %d\n", i);
         prod_index = (prod_index+1) % N;
 
         V(mutex);
         V(full_slots);
     }
+    n_printf("Producer finished. \n");
 }
 
 void consumer() {
@@ -29,12 +30,13 @@ void consumer() {
         P(mutex);
 
         char value = buffer[cons_index];
-        n_printf("Test consumer %d\n", value);
+        n_printf("Consuming %d\n", value);
         cons_index = (cons_index+1) % N;
 
         V(mutex);
         V(empty_slots);
     }
+    n_printf("Consumer finished. \n");
 }
 
 int main() {
